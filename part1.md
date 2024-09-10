@@ -77,6 +77,7 @@ You will upload your final proposal as a PDF to Gradescope.
  
 1. Meet with a TA or the instructor to ensure the design is appropriate and get feedback:
     * This 10-15 minute meeting is required.
+    * Sign up for the meeting by using the links on the [left sidebar on the course website](https://w4111.github.io) under "Proj1 Part 1 Appointments"
     * We will have expanded office hours during that week.
     * At least one must attend.  It's much better if both attend.
     * **At least 24 hours before your meeting**, submit a draft version of your materials on Gradescope (ungraded). 

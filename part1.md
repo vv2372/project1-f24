@@ -87,7 +87,7 @@ You will upload your final proposal as a PDF to Gradescope.
 1. Submit a digital copy of the following on the due date:
     1. Revised one-paragraph description of the application
     2. Revised Entity-relationship diagram
-    3. **Resulting SQL schema**
+    3. **Resulting SQL schema** as create table statements
     4. Revised contingency plan (optional)
 1. Keep a copy of all these materials for yourselves, since you will need them for Parts 2 and 3 
 

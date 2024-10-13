@@ -62,8 +62,7 @@ Familiarize yourself with the [PostgreSQL documentation](http://www.postgresql.o
 
 After the installation is completed, connect to our postgres database in one of two ways:
 
-* Use [the convenient notebook on colab](https://colab.research.google.com/github/w4111/project1-s22/blob/main/part2.ipynb)
-  * You will want to copy the notebook to your google drive if you want to save your work.
+* Use the part2.ipynb in the repository, and save a copy of it to your own google drive.
 * Use `psql`command in your computer's terminal:
 
       psql -h w4111.cisxo09blonu.us-east-1.rds.amazonaws.com -U YOUR_UNI w4111

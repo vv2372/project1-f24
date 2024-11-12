@@ -2,40 +2,22 @@
 
 """
 Columbia W4111 Intro to databases
-Example webserver
 
-To run locally
-
-    python server.py
+To run locally: python server.py
 
 Go to http://localhost:8111 in your browser
-
-
 A debugger such as "pdb" may be helpful for debugging.
-Read about it online.
 """
 
 import os
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
-from flask import Flask, request, render_template, g, redirect, Response
+from flask import Flask, request, render_template, g, redirect, Response, abort
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 
 
-
-# XXX: The Database URI should be in the format of: 
-#
-#     postgresql://USER:PASSWORD@<IP_OF_POSTGRE_SQL_SERVER>/<DB_NAME>
-#
-# For example, if you had username ewu2493, password foobar, then the following line would be:
-#
-#     DATABASEURI = "postgresql://ewu2493:foobar@<IP_OF_POSTGRE_SQL_SERVER>/postgres"
-#
-# For your convenience, we already set it to the class database
-
-# Use the DB credentials you received by e-mail
 DB_USER = "vd2468"
 DB_PASSWORD = "vd2468_vv2372"
 
@@ -194,7 +176,6 @@ def add():
 @app.route('/login')
 def login():
     abort(401)
-    this_is_never_executed()
 
 
 if __name__ == "__main__":

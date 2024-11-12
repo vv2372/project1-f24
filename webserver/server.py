@@ -36,12 +36,12 @@ app = Flask(__name__, template_folder=tmpl_dir)
 # For your convenience, we already set it to the class database
 
 # Use the DB credentials you received by e-mail
-DB_USER = "YOUR_DB_USERNAME_HERE"
-DB_PASSWORD = "YOUR_DB_PASSWORD_HERE"
+DB_USER = "vd2468"
+DB_PASSWORD = "vd2468_vv2372"
 
 DB_SERVER = "w4111.cisxo09blonu.us-east-1.rds.amazonaws.com"
 
-DATABASEURI = "postgresql://"+DB_USER+":"+DB_PASSWORD+"@"+DB_SERVER+"/proj1part2"
+DATABASEURI = "postgresql://"+DB_USER+":"+DB_PASSWORD+"@"+DB_SERVER+"/w4111"
 
 
 #
@@ -51,14 +51,18 @@ engine = create_engine(DATABASEURI)
 
 
 # Here we create a test table and insert some values in it
-engine.execute("""DROP TABLE IF EXISTS test;""")
-engine.execute("""CREATE TABLE IF NOT EXISTS test (
-  id serial,
-  name text
-);""")
-engine.execute("""INSERT INTO test(name) VALUES ('grace hopper'), ('alan turing'), ('ada lovelace');""")
+with engine.connect() as conn:
+    conn.execute(text("SET schema 'vd2468';"))
+    conn.execute(text("SET search_path TO vd2468;"))
+    conn.commit()
 
-
+    conn.execute(text("DROP TABLE IF EXISTS test;"))
+    conn.execute(text("""CREATE TABLE IF NOT EXISTS test (
+      id serial,
+      name text
+    );"""))
+    conn.execute(text("INSERT INTO test(name) VALUES ('grace hopper'), ('alan turing'), ('ada lovelace');"))
+    conn.commit()
 
 @app.before_request
 def before_request():
@@ -120,10 +124,10 @@ def index():
   #
   # example of a database query
   #
-  cursor = g.conn.execute("SELECT name FROM test")
+  cursor = g.conn.execute(text("SELECT name FROM test"))
   names = []
   for result in cursor:
-    names.append(result['name'])  # can also be accessed using result[0]
+    names.append(result._mapping['name'])  # can also be accessed using result[0]
   cursor.close()
 
   #
@@ -179,8 +183,11 @@ def another():
 def add():
   name = request.form['name']
   print(name)
-  cmd = 'INSERT INTO test(name) VALUES (:name1), (:name2)';
-  g.conn.execute(text(cmd), name1 = name, name2 = name);
+  cmd = 'INSERT INTO test(name) VALUES (:name1)';
+  g.conn.execute(text(cmd), {
+    "name1": name
+  });
+  g.conn.commit() 
   return redirect('/')
 
 

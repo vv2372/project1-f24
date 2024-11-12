@@ -1,26 +1,13 @@
+# Restaurant Inspection & Rating App
+### COMS 4111: Databases
 
+### Vishal Dubey (vd2468) and Vineeth Vajipey (vv2732)
 
-Install pip if needed
-
-        sudo apt-get install python-pip
-
-Install libraries
-
-        pip install click flask sqlalchemy
-
-
-Edit `server.py` to set your database URI
-
-        DATABASEURI = "<your database uri>"
-
-
-Run it in the shell
-
+To run:
 
         python server.py
 
-Get help:
+After running, visit:
 
-        python server.py --help
-
+        http://localhost:8111
       

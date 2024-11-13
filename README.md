@@ -9,7 +9,10 @@ To run:
         source venv/bin/activate
         pip3 install -r requirements.txt
         cd webserver
+
         python3 server.py
+                OR
+        python3 server.py --debug
 
 After running, visit:
 

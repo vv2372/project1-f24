@@ -66,23 +66,18 @@ def teardown_request(exception):
 @app.route('/')
 def home():
   print(request.args)
-  if not session.get('logged_in') or not session.get('user_id'):
-    return render_template('login.html')
+  if session.get('logged_in') and session.get('user_id'):
+    user_id = session['user_id']
+    try:
+        context = fetch_user_data(user_id)
+        return render_template("dashboard.html", **context)
+    except ValueError as e:
+        print("Error fetching home data, ", e)
+        flash(str(e))
+        session.clear()
+        return redirect('/')
   else:
-    cursor = g.conn.execute(text("SELECT * FROM User_Data WHERE user_id = :user_id1 LIMIT 1;"), {
-      "user_id1": session.get('user_id')
-    })
-    result = cursor.fetchone()
-    cursor.close()
-    if result:
-      print(result)
-      context = dict(data = result)
-      return render_template("dashboard.html", **context)
-    else:
-      errMsg = 'Something went wrong, sorry!'
-      print(errMsg)
-      flash(errMsg)
-      return home()
+      return render_template('login.html')
 
 @app.route('/login', methods=['POST'])
 def do_login():
@@ -90,16 +85,13 @@ def do_login():
     "email1": request.form['email']
   })
   result = cursor.fetchone()
-  cursor.close()
   if result:
-    print(result)
     user_id = result._mapping['user_id']
-    print("Logged in user", user_id)
     session['logged_in'] = True
     session['user_id'] = user_id
     return redirect('/')
   else:
-    errMsg = 'Wrong password!'
+    errMsg = 'No user found!'
     print(errMsg)
     flash(errMsg)
     return redirect('/')
@@ -139,35 +131,48 @@ def logout():
     flash('You have been logged out.')
     return redirect('/')
 
-#
-# This is an example of a different path.  You can see it at
-# 
-#     localhost:8111/another
-#
-# notice that the functio name is another() rather than index()
-# the functions for each app.route needs to have different names
-#
-@app.route('/another')
-def another():
-  return render_template("anotherfile.html")
+def fetch_user_data(user_id):
+    # Check if the user exists
+    user_query = text("SELECT * FROM User_Data WHERE user_id = :user_id")
+    user_result = g.conn.execute(user_query, {"user_id": user_id}).fetchone()
 
+    if not user_result:
+        raise ValueError("Invalid user ID")
 
-# Example of adding new data to the database
-@app.route('/add', methods=['POST'])
-def add():
-  name = request.form['name']
-  print(name)
-  cmd = 'INSERT INTO test(name) VALUES (:name1)';
-  g.conn.execute(text(cmd), {
-    "name1": name
-  });
-  g.conn.commit() 
-  return redirect('/')
+    # Fetch businesses with average ratings
+    business_query = text("""
+        SELECT b.business_id, b.business_name, b.street, b.zipcode, b.cuisine, b.latitude, b.longitude, b.boro, COALESCE(AVG(c.rating), 0) AS average_rating
+        FROM Business b
+        LEFT JOIN Comment c ON b.business_id = c.business_id
+        GROUP BY b.business_id
+    """)
+    businesses = g.conn.execute(business_query).fetchall()
 
+    # Fetch pins for the user
+    pin_query = text("""
+        SELECT p.pin_id, p.business_id, p.color
+        FROM Pin p
+        WHERE p.user_id = :user_id
+    """)
+    pins = g.conn.execute(pin_query, {"user_id": user_id}).fetchall()
 
-@app.route('/login')
-def login():
-    abort(401)
+    # Fetch groups the user has joined
+    group_query = text("""
+        SELECT g.group_id, g.group_title, g.group_description
+        FROM Group_Data g
+        JOIN Joins j ON g.group_id = j.group_id
+        WHERE j.user_id = :user_id
+    """)
+    groups = g.conn.execute(group_query, {"user_id": user_id}).fetchall()
+
+    ret = {
+        "user": user_result,
+        "businesses": businesses,
+        "pins": pins,
+        "groups": groups
+    }
+    print(ret)
+    return ret
 
 
 if __name__ == "__main__":

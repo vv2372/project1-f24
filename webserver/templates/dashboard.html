@@ -1,38 +1,65 @@
-<html>
-    <style>
-        body {
-            font-size: 15pt;
-            font-family: arial;
-        }
-    </style>
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link
+            href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+            rel="stylesheet"
+        />
+        <link
+            rel="stylesheet"
+            href="https://unpkg.com/leaflet/dist/leaflet.css"
+        />
+        <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+        <title>Dashboard</title>
+        <style>
+            #map {
+                height: 100vh;
+            }
+        </style>
+    </head>
+    <body class="bg-white flex">
+        <div id="map" class="h-screen w-1/2"></div>
 
-    <body>
-        <h1>Hello!</h1>
-        <div>{{data}}</div>
-
-        <div>
-            {% for n in data %}
-            <div>{{n}}</div>
-            {% endfor %}
-        </div>
-
-        <p><a href="/another">Go to the other page</a></p>
-
-        <form method="POST" action="/add">
-            <p>
-                Name of new computer scientist:
-                <input type="text" name="name" />
-                <input type="submit" value="Add" />
-            </p>
-        </form>
-
-        <form action="/logout" method="get">
+        <div class="h-screen overflow-y-auto w-1/2 p-8 relative">
             <button
-                type="submit"
-                class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+                class="absolute top-4 right-4 bg-blue-500 text-white px-4 py-2 rounded"
             >
                 Logout
             </button>
-        </form>
+
+            <h1 class="text-2xl font-bold mb-4">
+                Welcome, {{ user.first_name }} {{ user.last_name }}
+            </h1>
+            <h2 class="text-xl font-semibold mb-2">Businesses</h2>
+            <ul>
+                {% for business in businesses %}
+                <li class="mb-4">
+                    <strong>{{ business.business_name }}</strong> - {{
+                    business.cuisine }}<br />
+                    Address: {{ business.street }}, {{ business.zipcode }}<br />
+                    Average Rating: {{ business.average_rating }}<br />
+                    Location: {{ business.boro }}<br />
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <script>
+            var map = L.map("map").setView([40.7128, -74.006], 12); // Centered on New York City
+
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                maxZoom: 19,
+                attribution:
+                    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            }).addTo(map);
+
+            {% for business in businesses %}
+                console.log("Adding marker for:", "{{ business.business_name }}");
+                L.marker([{{ business.latitude }}, {{ business.longitude }}]).addTo(map)
+                    .bindPopup('<b>{{ business.business_name }}</b><br>{{ business.cuisine }}');
+            {% endfor %}
+        </script>
     </body>
 </html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link
+            href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+            rel="stylesheet"
+        />
+        <title>Login</title>
+    </head>
+    <body class="bg-white flex items-center justify-center min-h-screen">
+        <div class="w-full max-w-md">
+            {% with messages = get_flashed_messages() %} {% if messages %}
+            <div class="mb-4">
+                {% for message in messages %}
+                <div
+                    class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative"
+                    role="alert"
+                >
+                    <span class="block sm:inline">{{ message }}</span>
+                    <span class="absolute top-0 bottom-0 right-0 px-4 py-3">
+                        <svg
+                            class="fill-current h-6 w-6 text-red-500"
+                            role="button"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                            onclick="this.parentElement.parentElement.style.display='none';"
+                        >
+                            <title>Close</title>
+                            <path
+                                d="M14.348 5.652a1 1 0 00-1.414 0L10 8.586 7.066 5.652a1 1 0 10-1.414 1.414L8.586 10l-2.934 2.934a1 1 0 101.414 1.414L10 11.414l2.934 2.934a1 1 0 001.414-1.414L11.414 10l2.934-2.934a1 1 0 000-1.414z"
+                            />
+                        </svg>
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %} {% endwith %}
+
+            <form
+                id="login-form"
+                action="/login"
+                method="POST"
+                class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4"
+            >
+                <div class="mb-4">
+                    <h1 class="text-center text-2xl font-bold mb-4">Login</h1>
+                    <input
+                        type="text"
+                        name="email"
+                        placeholder="Email"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-3"
+                    />
+                    <input
+                        type="password"
+                        name="password"
+                        placeholder="Password"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-3"
+                    />
+                    <input
+                        type="submit"
+                        value="Log in"
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full mb-2"
+                    />
+                    <button
+                        type="button"
+                        onclick="toggleForm()"
+                        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+                    >
+                        Sign Up
+                    </button>
+                </div>
+            </form>
+
+            <form
+                id="signup-form"
+                action="/signup"
+                method="POST"
+                class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 hidden"
+            >
+                <div class="mb-4">
+                    <h1 class="text-center text-2xl font-bold mb-4">Sign Up</h1>
+                    <input
+                        type="text"
+                        name="email"
+                        placeholder="Email"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-3"
+                    />
+                    <input
+                        type="text"
+                        name="phone_number"
+                        placeholder="Phone Number"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-3"
+                    />
+                    <input
+                        type="text"
+                        name="first_name"
+                        placeholder="First Name"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-3"
+                    />
+                    <input
+                        type="text"
+                        name="last_name"
+                        placeholder="Last Name"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-3"
+                    />
+                    <input
+                        type="number"
+                        name="age"
+                        placeholder="Age"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-3"
+                    />
+                    <input
+                        type="password"
+                        name="password"
+                        placeholder="Password"
+                        class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mb-3"
+                    />
+                    <input
+                        type="submit"
+                        value="Sign Up"
+                        class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full mb-2"
+                    />
+                    <button
+                        type="button"
+                        onclick="toggleForm()"
+                        class="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+                    >
+                        Back to Login
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <script>
+            function toggleForm() {
+                const loginForm = document.getElementById("login-form");
+                const signupForm = document.getElementById("signup-form");
+                loginForm.classList.toggle("hidden");
+                signupForm.classList.toggle("hidden");
+            }
+        </script>
+    </body>
+</html>

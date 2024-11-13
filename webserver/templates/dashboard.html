@@ -1,0 +1,38 @@
+<html>
+    <style>
+        body {
+            font-size: 15pt;
+            font-family: arial;
+        }
+    </style>
+
+    <body>
+        <h1>Hello!</h1>
+        <div>{{data}}</div>
+
+        <div>
+            {% for n in data %}
+            <div>{{n}}</div>
+            {% endfor %}
+        </div>
+
+        <p><a href="/another">Go to the other page</a></p>
+
+        <form method="POST" action="/add">
+            <p>
+                Name of new computer scientist:
+                <input type="text" name="name" />
+                <input type="submit" value="Add" />
+            </p>
+        </form>
+
+        <form action="/logout" method="get">
+            <button
+                type="submit"
+                class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            >
+                Logout
+            </button>
+        </form>
+    </body>
+</html>

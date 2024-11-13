@@ -12,39 +12,15 @@ A debugger such as "pdb" may be helpful for debugging.
 import os
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
-from flask import Flask, request, render_template, g, redirect, Response, abort
+from flask import Flask, request, render_template, g, redirect, Response, abort, session, flash
+from db_setup import create_tables, engine
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 
+app.secret_key = os.urandom(24)
 
-DB_USER = "vd2468"
-DB_PASSWORD = "vd2468_vv2372"
-
-DB_SERVER = "w4111.cisxo09blonu.us-east-1.rds.amazonaws.com"
-
-DATABASEURI = "postgresql://"+DB_USER+":"+DB_PASSWORD+"@"+DB_SERVER+"/w4111"
-
-
-#
-# This line creates a database engine that knows how to connect to the URI above
-#
-engine = create_engine(DATABASEURI)
-
-
-# Here we create a test table and insert some values in it
-with engine.connect() as conn:
-    conn.execute(text("SET schema 'vd2468';"))
-    conn.execute(text("SET search_path TO vd2468;"))
-    conn.commit()
-
-    conn.execute(text("DROP TABLE IF EXISTS test;"))
-    conn.execute(text("""CREATE TABLE IF NOT EXISTS test (
-      id serial,
-      name text
-    );"""))
-    conn.execute(text("INSERT INTO test(name) VALUES ('grace hopper'), ('alan turing'), ('ada lovelace');"))
-    conn.commit()
+create_tables()
 
 @app.before_request
 def before_request():
@@ -75,8 +51,8 @@ def teardown_request(exception):
 
 
 #
-# @app.route is a decorator around index() that means:
-#   run index() whenever the user tries to access the "/" path using a GET request
+# @app.route is a decorator around home() that means:
+#   run home() whenever the user tries to access the "/" path using a GET request
 #
 # If you wanted the user to go to e.g., localhost:8111/foobar/ with POST or GET then you could use
 #
@@ -88,64 +64,80 @@ def teardown_request(exception):
 # see for decorators: http://simeonfranklin.com/blog/2012/jul/1/python-decorators-in-12-steps/
 #
 @app.route('/')
-def index():
-  """
-  request is a special object that Flask provides to access web request information:
-
-  request.method:   "GET" or "POST"
-  request.form:     if the browser submitted a form, this contains the data in the form
-  request.args:     dictionary of URL arguments e.g., {a:1, b:2} for http://localhost?a=1&b=2
-
-  See its API: http://flask.pocoo.org/docs/0.10/api/#incoming-request-data
-  """
-
-  # DEBUG: this is debugging code to see what request looks like
+def home():
   print(request.args)
+  if not session.get('logged_in') or not session.get('user_id'):
+    return render_template('login.html')
+  else:
+    cursor = g.conn.execute(text("SELECT * FROM User_Data WHERE user_id = :user_id1 LIMIT 1;"), {
+      "user_id1": session.get('user_id')
+    })
+    result = cursor.fetchone()
+    cursor.close()
+    if result:
+      print(result)
+      context = dict(data = result)
+      return render_template("dashboard.html", **context)
+    else:
+      errMsg = 'Something went wrong, sorry!'
+      print(errMsg)
+      flash(errMsg)
+      return home()
 
-
-  #
-  # example of a database query
-  #
-  cursor = g.conn.execute(text("SELECT name FROM test"))
-  names = []
-  for result in cursor:
-    names.append(result._mapping['name'])  # can also be accessed using result[0]
+@app.route('/login', methods=['POST'])
+def do_login():
+  cursor = g.conn.execute(text("SELECT * FROM User_Data WHERE email = :email1 LIMIT 1;"), {
+    "email1": request.form['email']
+  })
+  result = cursor.fetchone()
   cursor.close()
+  if result:
+    print(result)
+    user_id = result._mapping['user_id']
+    print("Logged in user", user_id)
+    session['logged_in'] = True
+    session['user_id'] = user_id
+    return redirect('/')
+  else:
+    errMsg = 'Wrong password!'
+    print(errMsg)
+    flash(errMsg)
+    return redirect('/')
+  
+@app.route('/signup', methods=['POST'])
+def signup():
+    email = request.form['email']
+    phone_number = request.form['phone_number']
+    first_name = request.form['first_name']
+    last_name = request.form['last_name']
+    age = request.form['age']
+    # password = request.form['password']
 
-  #
-  # Flask uses Jinja templates, which is an extension to HTML where you can
-  # pass data to a template and dynamically generate HTML based on the data
-  # (you can think of it as simple PHP)
-  # documentation: https://realpython.com/blog/python/primer-on-jinja-templating/
-  #
-  # You can see an example template in templates/index.html
-  #
-  # context are the variables that are passed to the template.
-  # for example, "data" key in the context variable defined below will be 
-  # accessible as a variable in index.html:
-  #
-  #     # will print: [u'grace hopper', u'alan turing', u'ada lovelace']
-  #     <div>{{data}}</div>
-  #     
-  #     # creates a <div> tag for each element in data
-  #     # will print: 
-  #     #
-  #     #   <div>grace hopper</div>
-  #     #   <div>alan turing</div>
-  #     #   <div>ada lovelace</div>
-  #     #
-  #     {% for n in data %}
-  #     <div>{{n}}</div>
-  #     {% endfor %}
-  #
-  context = dict(data = names)
+    try:
+        g.conn.execute(text("""
+            INSERT INTO User_Data (email, phone_number, first_name, last_name, age)
+            VALUES (:email, :phone_number, :first_name, :last_name, :age)
+        """), {
+            "email": email,
+            "phone_number": phone_number,
+            "first_name": first_name,
+            "last_name": last_name,
+            "age": age
+        })
+        g.conn.commit()
+        flash('Sign up successful! Please log in.')
+        return redirect('/')
+    except Exception as e:
+        print("Error during sign up:", e)
+        flash('Sign up failed. Please try again.')
+        return redirect('/')
 
-
-  #
-  # render_template looks in the templates/ folder for files.
-  # for example, the below file reads template/index.html
-  #
-  return render_template("index.html", **context)
+@app.route('/logout')
+def logout():
+    session.clear()
+    print("Logged out!")
+    flash('You have been logged out.')
+    return redirect('/')
 
 #
 # This is an example of a different path.  You can see it at
@@ -187,18 +179,6 @@ if __name__ == "__main__":
   @click.argument('HOST', default='0.0.0.0')
   @click.argument('PORT', default=8111, type=int)
   def run(debug, threaded, host, port):
-    """
-    This function handles command line parameters.
-    Run the server using
-
-        python server.py
-
-    Show the help text using
-
-        python server.py --help
-
-    """
-
     HOST, PORT = host, port
     print("running on %s:%d" % (HOST, PORT))
     app.run(host=HOST, port=PORT, debug=debug, threaded=threaded)

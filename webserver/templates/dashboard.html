@@ -11,7 +11,16 @@
             rel="stylesheet"
             href="https://unpkg.com/leaflet/dist/leaflet.css"
         />
+        <link
+            rel="stylesheet"
+            href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"
+        />
+        <link
+            rel="stylesheet"
+            href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"
+        />
         <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+        <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
         <title>Dashboard</title>
         <style>
             #map {
@@ -70,6 +79,21 @@
                     '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
             }).addTo(map);
 
+            var markers = L.markerClusterGroup({
+                iconCreateFunction: function (cluster) {
+                    var childMarkers = cluster.getAllChildMarkers();
+                    var hasRedPin = childMarkers.some(function(marker) {
+                        return marker.options.icon === redIcon;
+                    });
+
+                    var clusterColor = hasRedPin ? 'red' : 'black';
+                    return L.divIcon({
+                        html: '<div style="background-color: ' + clusterColor + '; color: white; border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">' + cluster.getChildCount() + '</div>',
+                        className: 'custom-cluster-icon',
+                        iconSize: L.point(40, 40)
+                    });
+                }
+            });
             var blueIcon = L.icon({
                 iconUrl: 'static/images/map-icon.png',
                 iconSize: [37, 37],
@@ -89,9 +113,13 @@
                 var icon = {{ 'true' if has_pin else 'false' }} ? redIcon : blueIcon;
 
                 console.log("Adding marker for:", "{{ business.business_name }}");
-                L.marker([{{ business.latitude }}, {{ business.longitude }}], { icon: icon }).addTo(map)
+                var marker = L.marker([{{ business.latitude }}, {{ business.longitude }}], { icon: icon })
                     .bindPopup('<b>{{ business.business_name }}</b><br>{{ business.cuisine }}');
+
+                markers.addLayer(marker);
             {% endfor %}
+
+            map.addLayer(markers);
         </script>
     </body>
 </html>

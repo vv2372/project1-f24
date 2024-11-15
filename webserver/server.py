@@ -158,7 +158,8 @@ def fetch_user_data(user_id):
         "pins": pins,
         "groups": groups
     }
-    print(ret)
+    print(ret['businesses'])
+    print("Fetched data for user", user_id)
     return ret
 
 

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+    <title>{{ business.business_name }} - Details</title>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Business Header -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <div class="flex justify-between items-center">
+                <h1 class="text-3xl font-bold">{{ business.business_name }}</h1>
+                <div class="text-right">
+                    <p class="text-lg">Rating: {{ "%.1f"|format(business.average_rating) }} ({{ business.review_count }} reviews)</p>
+                    <p class="text-gray-600">{{ business.cuisine }}</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <p class="text-gray-600">{{ business.street }}, {{ business.zipcode }}</p>
+                <p class="text-gray-600">{{ business.boro }}</p>
+            </div>
+            <div class="mt-4">
+                {% if is_pinned %}
+                    <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm">Pinned</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Reviews Section -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 class="text-2xl font-bold mb-4">Reviews</h2>
+            {% if comments %}
+                {% for comment in comments %}
+                    <div class="border-b border-gray-200 py-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-semibold">{{ comment.title }}</p>
+                                <p class="text-gray-600">{{ comment.message }}</p>
+                                <p class="text-sm text-gray-500 mt-2">By {{ comment.first_name }} {{ comment.last_name }}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm">
+                                    Rating: {{ comment.rating }}/5
+                                </span>
+                                <p class="text-sm text-gray-500 mt-1">{{ comment.comment_date }}</p>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-gray-600">No reviews yet</p>
+            {% endif %}
+        </div>
+
+        <!-- Violations Section -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold mb-4">Health Inspection History</h2>
+            {% if violations %}
+                {% for violation in violations %}
+                    <div class="border-b border-gray-200 py-4">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="font-semibold">Code: {{ violation.code }}</p>
+                                <p class="text-gray-600">{{ violation.description }}</p>
+                                <p class="text-sm text-gray-500 mt-2">{{ violation.violation }}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm">
+                                    Grade: {{ violation.grade }}
+                                </span>
+                                <p class="text-sm text-gray-500 mt-1">{{ violation.inspection_date }}</p>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="text-gray-600">No violations found</p>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html> 

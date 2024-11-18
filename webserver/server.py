@@ -52,19 +52,29 @@ def teardown_request(exception):
 
 @app.route('/')
 def home():
-  print(request.args)
-  if session.get('logged_in') and session.get('user_id'):
-    user_id = session['user_id']
-    try:
-        context = fetch_user_data(user_id)
-        return render_template("dashboard.html", **context)
-    except ValueError as e:
-        print("Error fetching home data, ", e)
-        flash(str(e))
-        session.clear()
-        return redirect('/')
-  else:
-      return render_template('login.html')
+    """
+    Once logged in, this function fetches the user's data and gets the filter parameters from the request.
+    It then renders the dashboard.html template.
+
+    """
+    print(request.args)
+    if session.get('logged_in') and session.get('user_id'):
+        user_id = session['user_id']
+        try:
+            cuisine = request.args.get('cuisine')
+            boro = request.args.get('boro')
+            min_rating = request.args.get('min_rating')
+            max_rating = request.args.get('max_rating')
+            
+            context = fetch_user_data(user_id, cuisine, boro, min_rating, max_rating)
+            return render_template("dashboard.html", **context)
+        except ValueError as e:
+            print("Error fetching home data, ", e)
+            flash(str(e))
+            session.clear()
+            return redirect('/')
+    else:
+        return render_template('login.html')
 
 @app.route('/login', methods=['POST'])
 def do_login():
@@ -118,22 +128,57 @@ def logout():
     flash('You have been logged out.')
     return redirect('/')
 
-def fetch_user_data(user_id):
-    # Check if the user exists
+def fetch_user_data(user_id, cuisine=None, boro=None, min_rating=None, max_rating=None):
+    """
+    This function fetches the user's data and the businesses that match the filter parameters.
+    It then returns a dictionary containing the user's data, the businesses, and the pins and groups associated with the user.
+    """
     user_query = text("SELECT * FROM User_Data WHERE user_id = :user_id")
     user_result = g.conn.execute(user_query, {"user_id": user_id}).fetchone()
 
     if not user_result:
         raise ValueError("Invalid user ID")
 
-    # Fetch businesses with average ratings
-    business_query = text("""
-        SELECT b.business_id, b.business_name, b.street, b.zipcode, b.cuisine, b.latitude, b.longitude, b.boro, COALESCE(AVG(c.rating), 0) AS average_rating
+    query_parts = ["""
+        SELECT b.business_id, b.business_name, b.street, b.zipcode, b.cuisine, 
+               b.latitude, b.longitude, b.boro, COALESCE(AVG(c.rating), 0) AS average_rating
         FROM Business b
         LEFT JOIN Comment c ON b.business_id = c.business_id
-        GROUP BY b.business_id
-    """)
-    businesses = g.conn.execute(business_query).fetchall()
+    """]
+    
+    where_conditions = []
+    params = {}
+    
+    if cuisine:
+        where_conditions.append("b.cuisine = :cuisine")
+        params["cuisine"] = cuisine
+        
+    if boro:
+        where_conditions.append("b.boro = :boro")
+        params["boro"] = boro
+        
+    # Add WHERE clause if there are any conditions
+    if where_conditions:
+        query_parts.append("WHERE " + " AND ".join(where_conditions))
+        
+    # Add GROUP BY clause
+    query_parts.append("GROUP BY b.business_id")
+    
+    # Add HAVING clause for rating filters
+    having_conditions = []
+    if min_rating:
+        having_conditions.append("COALESCE(AVG(c.rating), 0) >= :min_rating")
+        params["min_rating"] = float(min_rating)
+    if max_rating:
+        having_conditions.append("COALESCE(AVG(c.rating), 0) <= :max_rating")
+        params["max_rating"] = float(max_rating)
+        
+    if having_conditions:
+        query_parts.append("HAVING " + " AND ".join(having_conditions))
+
+    # Execute the final query
+    business_query = text(" ".join(query_parts))
+    businesses = g.conn.execute(business_query, params).fetchall()
 
     # Fetch pins for the user
     pin_query = text("""
@@ -156,10 +201,16 @@ def fetch_user_data(user_id):
         "user": user_result,
         "businesses": businesses,
         "pins": pins,
-        "groups": groups
+        "groups": groups,
+        # Add current filter values to context
+        "current_filters": {
+            "cuisine": cuisine,
+            "boro": boro,
+            "min_rating": min_rating,
+            "max_rating": max_rating
+        }
     }
-    print(ret['businesses'])
-    print("Fetched data for user", user_id)
+    print("Fetched filtered data for user", user_id)
     return ret
 
 

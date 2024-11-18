@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link
+            href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+            rel="stylesheet"
+        />
+        <title>{{ business.business_name }}</title>
+    </head>
+    <body class="bg-gray-100 flex items-center justify-center min-h-screen">
+        <div class="bg-white p-8 rounded-lg shadow-lg max-w-4xl w-full">
+            <button
+                onclick="window.history.back()"
+                class="bg-gray-300 text-black px-4 py-2 rounded mb-4"
+            >
+                Back
+            </button>
+            <h1 class="text-2xl font-bold mb-4 text-center">
+                {{ business.business_name }}
+            </h1>
+            <p>
+                <strong>Address:</strong> {{ business.street }}, {{
+                business.zipcode }}
+            </p>
+            <p><strong>Cuisine:</strong> {{ business.cuisine }}</p>
+            <p><strong>Borough:</strong> {{ business.boro }}</p>
+
+            <div class="flex flex-col md:flex-row mt-8">
+                <div class="md:w-1/2 pr-4">
+                    <h2 class="text-xl font-semibold">Inspections</h2>
+                    <table class="min-w-full bg-white">
+                        <thead>
+                            <tr>
+                                <th class="py-2">Date</th>
+                                <th class="py-2">Grade</th>
+                                <th class="py-2">Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inspection in inspections %}
+                            <tr class="bg-gray-50">
+                                <td class="py-2">
+                                    {{ inspection.inspection_date }}
+                                </td>
+                                <td class="py-2">{{ inspection.grade }}</td>
+                                <td class="py-2">
+                                    {{ inspection.inspection_type }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <h2 class="text-xl font-semibold mt-4">Violations</h2>
+                    <table class="min-w-full bg-white">
+                        <thead>
+                            <tr>
+                                <th class="py-2">Description</th>
+                                <th class="py-2">Code</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for violation in violations %}
+                            <tr class="bg-gray-50">
+                                <td class="py-2">
+                                    {{ violation.description }}
+                                </td>
+                                <td class="py-2">{{ violation.code }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="md:w-1/2 pl-4">
+                    <h2 class="text-xl font-semibold">Comments</h2>
+                    <div class="max-h-96 overflow-y-auto">
+                        <ul class="space-y-4">
+                            {% for comment in comments %}
+                            <li class="bg-gray-50 p-4 rounded-lg shadow">
+                                <p class="font-semibold">{{ comment.title }}</p>
+                                <p class="text-gray-700">
+                                    {{ comment.message }}
+                                </p>
+                                <p class="text-sm text-gray-500">
+                                    By {{ comment.first_name }} - Rating: {{
+                                    comment.rating }} - Posted on: {{
+                                    comment.comment_date }}
+                                </p>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <form class="mt-4">
+                        <textarea
+                            class="w-full mt-2 p-2 border rounded"
+                            placeholder="Add a comment"
+                        ></textarea>
+                        <input
+                            type="number"
+                            min="1"
+                            max="5"
+                            class="w-full mt-2 p-2 border rounded"
+                            placeholder="Rating (1-5)"
+                        />
+                        <button
+                            type="submit"
+                            class="bg-blue-500 text-white px-4 py-2 mt-2 rounded"
+                        >
+                            Submit
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>

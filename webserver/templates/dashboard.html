@@ -71,7 +71,7 @@
         </div>
 
         <script>
-            var map = L.map("map").setView([40.7128, -74.006], 12); // Centered on New York City
+            var map = L.map("map").setView([40.73, -73.995], 14); // Centered on New York City
 
             L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
                 maxZoom: 19,
@@ -114,7 +114,9 @@
 
                 console.log("Adding marker for:", "{{ business.business_name }}");
                 var marker = L.marker([{{ business.latitude }}, {{ business.longitude }}], { icon: icon })
-                    .bindPopup('<b>{{ business.business_name }}</b><br>{{ business.cuisine }}');
+                    .on('click', function() {
+                        window.location.href = '/business/{{ business.business_id }}';
+                    });
 
                 markers.addLayer(marker);
             {% endfor %}

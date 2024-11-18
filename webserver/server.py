@@ -2,6 +2,8 @@
 
 """
 Columbia W4111 Intro to databases
+Vishal Dubey (vd2468)
+Vineeth Vajipey (vv2373)
 
 To run locally: python server.py
 
@@ -13,12 +15,14 @@ import os
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, render_template, g, redirect, Response, abort, session, flash
+from datetime import timedelta
 from db_setup import create_tables, engine
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 
 app.secret_key = os.urandom(24)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)
 
 create_tables()
 
@@ -56,7 +60,7 @@ def home():
   if session.get('logged_in') and session.get('user_id'):
     user_id = session['user_id']
     try:
-        context = fetch_user_data(user_id)
+        context = fetch_dashboard_information(user_id)
         return render_template("dashboard.html", **context)
     except ValueError as e:
         print("Error fetching home data, ", e)
@@ -76,6 +80,7 @@ def do_login():
     user_id = result._mapping['user_id']
     session['logged_in'] = True
     session['user_id'] = user_id
+    session.permanent = True
     return redirect('/')
   else:
     errMsg = 'No user found!'
@@ -118,7 +123,58 @@ def logout():
     flash('You have been logged out.')
     return redirect('/')
 
-def fetch_user_data(user_id):
+dashboardData = {
+  "user": {},
+  "businesses": [],
+  "pins": [],
+  "groups": []
+}
+
+@app.route('/business/<int:business_id>')
+def business_detail(business_id):      
+    business_query = text("""
+        SELECT b.business_id, b.business_name, b.street, b.zipcode, b.cuisine, b.latitude, b.longitude, b.boro
+        FROM Business b
+        WHERE b.business_id = :business_id
+    """)
+    business = g.conn.execute(business_query, {"business_id": business_id}).fetchone()
+    
+    if business is None:
+      return "Business not found", 404
+      
+    inspection_query = text("""
+        SELECT i.inspection_id, i.inspection_date, i.action, i.score, i.grade, i.inspection_type
+        FROM Inspection i
+        WHERE i.business_id = :business_id
+    """)
+    inspections = g.conn.execute(inspection_query, {"business_id": business_id}).fetchall()
+
+    violation_query = text("""
+        SELECT v.violation_id, v.code, v.description, v.violation
+        FROM Violation v
+        JOIN Inspection i ON v.inspection_id = i.inspection_id
+        WHERE i.business_id = :business_id
+    """)
+    violations = g.conn.execute(violation_query, {"business_id": business_id}).fetchall()
+
+    comment_query = text("""
+        SELECT c.comment_id, c.title, c.message, c.rating, c.comment_date, u.first_name
+        FROM Comment c
+        JOIN User_Data u ON c.user_id = u.user_id
+        WHERE c.business_id = :business_id
+    """)
+    comments = g.conn.execute(comment_query, {"business_id": business_id}).fetchall()
+    
+    print("inspections", inspections)
+    print("violations", violations)
+    print("comments", comments)
+    print("business", business)
+    
+    return render_template('business_detail.html', business=business, inspections=inspections, violations=violations, comments=comments)
+
+def fetch_dashboard_information(user_id):
+    global dashboardData
+  
     # Check if the user exists
     user_query = text("SELECT * FROM User_Data WHERE user_id = :user_id")
     user_result = g.conn.execute(user_query, {"user_id": user_id}).fetchone()
@@ -158,6 +214,12 @@ def fetch_user_data(user_id):
         "pins": pins,
         "groups": groups
     }
+    
+    dashboardData['user'] = user_result
+    dashboardData['businesses'] = businesses
+    dashboardData['pins'] = pins
+    dashboardData['groups'] = groups
+    
     print(ret['businesses'])
     print("Fetched data for user", user_id)
     return ret

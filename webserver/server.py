@@ -217,7 +217,6 @@ def business_details(business_id):
         return redirect('/')
         
     try:
-        # Get business details
         business_query = text("""
             SELECT b.*, COALESCE(AVG(c.rating), 0) as average_rating, COUNT(c.comment_id) as review_count
             FROM Business b
@@ -231,7 +230,6 @@ def business_details(business_id):
             flash('Business not found!')
             return redirect('/')
             
-        # Get comments
         comments_query = text("""
             SELECT c.*, u.first_name, u.last_name
             FROM Comment c
@@ -241,7 +239,6 @@ def business_details(business_id):
         """)
         comments = g.conn.execute(comments_query, {"business_id": business_id}).fetchall()
         
-        # Get violations
         violations_query = text("""
             SELECT v.*, i.inspection_date, i.grade
             FROM Violation v
@@ -251,7 +248,6 @@ def business_details(business_id):
         """)
         violations = g.conn.execute(violations_query, {"business_id": business_id}).fetchall()
         
-        # Check if business is pinned by current user
         pin_query = text("""
             SELECT * FROM Pin 
             WHERE business_id = :business_id AND user_id = :user_id
@@ -273,6 +269,236 @@ def business_details(business_id):
         print("Error fetching business details:", e)
         flash('Error fetching business details')
         return redirect('/')
+
+# User endpoints
+@app.route('/api/users/<int:user_id>')
+def get_user(user_id):
+    """Get all information for a specific user"""
+    if not session.get('logged_in'):
+        return {'error': 'Not logged in'}, 401
+        
+    try:
+        query = text("""
+            SELECT user_id, email, phone_number, first_name, last_name, age, is_admin 
+            FROM User_Data 
+            WHERE user_id = :user_id
+        """)
+        result = g.conn.execute(query, {"user_id": user_id}).fetchone()
+        
+        if not result:
+            return {'error': 'User not found'}, 404
+            
+        return dict(result._mapping)
+        
+    except Exception as e:
+        print("Error fetching user:", e)
+        return {'error': 'Database error'}, 500
+
+@app.route('/api/users/<int:user_id>/businesses')
+def get_user_businesses(user_id):
+    """Get all businesses a user has interacted with (commented on or pinned)"""
+    if not session.get('logged_in'):
+        return {'error': 'Not logged in'}, 401
+        
+    try:
+        query = text("""
+            SELECT DISTINCT b.* 
+            FROM Business b
+            LEFT JOIN Pin p ON b.business_id = p.business_id
+            LEFT JOIN Comment c ON b.business_id = c.business_id
+            WHERE p.user_id = :user_id OR c.user_id = :user_id
+        """)
+        results = g.conn.execute(query, {"user_id": user_id}).fetchall()
+        return {'businesses': [dict(row._mapping) for row in results]}
+        
+    except Exception as e:
+        print("Error fetching user businesses:", e)
+        return {'error': 'Database error'}, 500
+
+# Business endpoints
+@app.route('/api/businesses/<int:business_id>/inspections')
+def get_business_inspections(business_id):
+    """Get all inspections for a given business"""
+    try:
+        query = text("""
+            SELECT * FROM Inspection
+            WHERE business_id = :business_id
+            ORDER BY inspection_date DESC
+        """)
+        results = g.conn.execute(query, {"business_id": business_id}).fetchall()
+        return {'inspections': [dict(row._mapping) for row in results]}
+        
+    except Exception as e:
+        print("Error fetching inspections:", e)
+        return {'error': 'Database error'}, 500
+
+@app.route('/api/inspections/<int:inspection_id>/violations')
+def get_inspection_violations(inspection_id):
+    """Get all violations for a given inspection"""
+    try:
+        query = text("""
+            SELECT * FROM Violation
+            WHERE inspection_id = :inspection_id
+        """)
+        results = g.conn.execute(query, {"inspection_id": inspection_id}).fetchall()
+        return {'violations': [dict(row._mapping) for row in results]}
+        
+    except Exception as e:
+        print("Error fetching violations:", e)
+        return {'error': 'Database error'}, 500
+
+# Pin endpoints
+@app.route('/api/users/<int:user_id>/pins')
+def get_user_pins(user_id):
+    """Get all pins for a given user"""
+    if not session.get('logged_in'):
+        return {'error': 'Not logged in'}, 401
+        
+    try:
+        query = text("""
+            SELECT p.*, b.business_name 
+            FROM Pin p
+            JOIN Business b ON p.business_id = b.business_id
+            WHERE p.user_id = :user_id
+        """)
+        results = g.conn.execute(query, {"user_id": user_id}).fetchall()
+        return {'pins': [dict(row._mapping) for row in results]}
+        
+    except Exception as e:
+        print("Error fetching pins:", e)
+        return {'error': 'Database error'}, 500
+
+@app.route('/api/pins', methods=['POST'])
+def create_pin():
+    """Create a new pin"""
+    if not session.get('logged_in'):
+        return {'error': 'Not logged in'}, 401
+        
+    try:
+        data = request.get_json()
+        query = text("""
+            INSERT INTO Pin (business_id, user_id, color)
+            VALUES (:business_id, :user_id, :color)
+            RETURNING pin_id
+        """)
+        result = g.conn.execute(query, {
+            "business_id": data['business_id'],
+            "user_id": session['user_id'],
+            "color": data['color']
+        })
+        g.conn.commit()
+        
+        return {'pin_id': result.fetchone()[0]}, 201
+        
+    except Exception as e:
+        print("Error creating pin:", e)
+        return {'error': 'Database error'}, 500
+
+# Comment endpoints
+@app.route('/api/businesses/<int:business_id>/comments')
+def get_business_comments(business_id):
+    """Get all comments for a business"""
+    try:
+        query = text("""
+            SELECT c.*, u.first_name, u.last_name
+            FROM Comment c
+            JOIN User_Data u ON c.user_id = u.user_id
+            WHERE c.business_id = :business_id
+            ORDER BY c.comment_date DESC
+        """)
+        results = g.conn.execute(query, {"business_id": business_id}).fetchall()
+        return {'comments': [dict(row._mapping) for row in results]}
+        
+    except Exception as e:
+        print("Error fetching comments:", e)
+        return {'error': 'Database error'}, 500
+
+@app.route('/api/comments', methods=['POST'])
+def create_comment():
+    """Create a new comment"""
+    if not session.get('logged_in'):
+        return {'error': 'Not logged in'}, 401
+        
+    try:
+        data = request.get_json()
+        query = text("""
+            INSERT INTO Comment (user_id, business_id, title, message, rating, comment_date)
+            VALUES (:user_id, :business_id, :title, :message, :rating, CURRENT_DATE)
+            RETURNING comment_id
+        """)
+        result = g.conn.execute(query, {
+            "user_id": session['user_id'],
+            "business_id": data['business_id'],
+            "title": data['title'],
+            "message": data['message'],
+            "rating": data['rating']
+        })
+        g.conn.commit()
+        
+        return {'comment_id': result.fetchone()[0]}, 201
+        
+    except Exception as e:
+        print("Error creating comment:", e)
+        return {'error': 'Database error'}, 500
+
+# Group endpoints
+@app.route('/api/groups/<int:group_id>/users')
+def get_group_users(group_id):
+    """Get all users in a group"""
+    try:
+        query = text("""
+            SELECT u.user_id, u.first_name, u.last_name, j.joined_at
+            FROM User_Data u
+            JOIN Joins j ON u.user_id = j.user_id
+            WHERE j.group_id = :group_id
+            ORDER BY j.joined_at DESC
+        """)
+        results = g.conn.execute(query, {"group_id": group_id}).fetchall()
+        return {'users': [dict(row._mapping) for row in results]}
+        
+    except Exception as e:
+        print("Error fetching group users:", e)
+        return {'error': 'Database error'}, 500
+
+@app.route('/api/groups')
+def get_groups():
+    """Get all groups"""
+    try:
+        query = text("""
+            SELECT g.*, COUNT(j.user_id) as member_count
+            FROM Group_Data g
+            LEFT JOIN Joins j ON g.group_id = j.group_id
+            GROUP BY g.group_id
+        """)
+        results = g.conn.execute(query).fetchall()
+        return {'groups': [dict(row._mapping) for row in results]}
+        
+    except Exception as e:
+        print("Error fetching groups:", e)
+        return {'error': 'Database error'}, 500
+
+@app.route('/api/groups/<int:group_id>/join', methods=['POST'])
+def join_group(group_id):
+    """Add a user to a group"""
+    if not session.get('logged_in'):
+        return {'error': 'Not logged in'}, 401
+        
+    try:
+        query = text("""
+            INSERT INTO Joins (user_id, group_id, joined_at)
+            VALUES (:user_id, :group_id, CURRENT_DATE)
+        """)
+        g.conn.execute(query, {
+            "user_id": session['user_id'],
+            "group_id": group_id
+        })
+        g.conn.commit()
+        
+        return {'message': 'Successfully joined group'}, 201
+        
+    except Exception as e:
+        print("Error joining group:", e)
+        return {'error': 'Database error'}, 500
 
 if __name__ == "__main__":
   import click

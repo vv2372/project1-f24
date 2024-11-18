@@ -157,14 +157,11 @@ def fetch_user_data(user_id, cuisine=None, boro=None, min_rating=None, max_ratin
         where_conditions.append("b.boro = :boro")
         params["boro"] = boro
         
-    # Add WHERE clause if there are any conditions
     if where_conditions:
         query_parts.append("WHERE " + " AND ".join(where_conditions))
         
-    # Add GROUP BY clause
     query_parts.append("GROUP BY b.business_id")
     
-    # Add HAVING clause for rating filters
     having_conditions = []
     if min_rating:
         having_conditions.append("COALESCE(AVG(c.rating), 0) >= :min_rating")
@@ -176,11 +173,9 @@ def fetch_user_data(user_id, cuisine=None, boro=None, min_rating=None, max_ratin
     if having_conditions:
         query_parts.append("HAVING " + " AND ".join(having_conditions))
 
-    # Execute the final query
     business_query = text(" ".join(query_parts))
     businesses = g.conn.execute(business_query, params).fetchall()
 
-    # Fetch pins for the user
     pin_query = text("""
         SELECT p.pin_id, p.business_id, p.color
         FROM Pin p
@@ -202,7 +197,7 @@ def fetch_user_data(user_id, cuisine=None, boro=None, min_rating=None, max_ratin
         "businesses": businesses,
         "pins": pins,
         "groups": groups,
-        # Add current filter values to context
+
         "current_filters": {
             "cuisine": cuisine,
             "boro": boro,
@@ -213,6 +208,71 @@ def fetch_user_data(user_id, cuisine=None, boro=None, min_rating=None, max_ratin
     print("Fetched filtered data for user", user_id)
     return ret
 
+@app.route('/business/<int:business_id>')
+def business_details(business_id):
+    """
+    Display detailed information about a specific business
+    """
+    if not session.get('logged_in'):
+        return redirect('/')
+        
+    try:
+        # Get business details
+        business_query = text("""
+            SELECT b.*, COALESCE(AVG(c.rating), 0) as average_rating, COUNT(c.comment_id) as review_count
+            FROM Business b
+            LEFT JOIN Comment c ON b.business_id = c.business_id
+            WHERE b.business_id = :business_id
+            GROUP BY b.business_id
+        """)
+        business = g.conn.execute(business_query, {"business_id": business_id}).fetchone()
+        
+        if not business:
+            flash('Business not found!')
+            return redirect('/')
+            
+        # Get comments
+        comments_query = text("""
+            SELECT c.*, u.first_name, u.last_name
+            FROM Comment c
+            JOIN User_Data u ON c.user_id = u.user_id
+            WHERE c.business_id = :business_id
+            ORDER BY c.comment_date DESC
+        """)
+        comments = g.conn.execute(comments_query, {"business_id": business_id}).fetchall()
+        
+        # Get violations
+        violations_query = text("""
+            SELECT v.*, i.inspection_date, i.grade
+            FROM Violation v
+            JOIN Inspection i ON v.inspection_id = i.inspection_id
+            WHERE i.business_id = :business_id
+            ORDER BY i.inspection_date DESC
+        """)
+        violations = g.conn.execute(violations_query, {"business_id": business_id}).fetchall()
+        
+        # Check if business is pinned by current user
+        pin_query = text("""
+            SELECT * FROM Pin 
+            WHERE business_id = :business_id AND user_id = :user_id
+        """)
+        pin = g.conn.execute(pin_query, {
+            "business_id": business_id,
+            "user_id": session['user_id']
+        }).fetchone()
+        
+        return render_template(
+            'business_details.html',
+            business=business,
+            comments=comments,
+            violations=violations,
+            is_pinned=bool(pin)
+        )
+        
+    except Exception as e:
+        print("Error fetching business details:", e)
+        flash('Error fetching business details')
+        return redirect('/')
 
 if __name__ == "__main__":
   import click

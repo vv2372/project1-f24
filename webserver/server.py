@@ -125,7 +125,7 @@ def signup():
         flash('Sign up failed. Please try again.')
         return redirect('/')
 
-@app.route('/logout')
+@app.route('/logout', methods=['POST'])
 def logout():
     session.clear()
     print("Logged out!")
@@ -141,12 +141,19 @@ dashboardData = {
 
 @app.route('/business/<int:business_id>')
 def business_detail(business_id):      
+    user_id = session.get('user_id')
+
     business_query = text("""
-        SELECT b.business_id, b.business_name, b.street, b.zipcode, b.cuisine, b.latitude, b.longitude, b.boro
+        SELECT b.business_id, b.business_name, b.street, b.zipcode, b.cuisine, b.latitude, b.longitude, b.boro,
+               CASE WHEN p.business_id IS NOT NULL THEN TRUE ELSE FALSE END AS is_pinned
         FROM Business b
+        LEFT JOIN Pin p ON b.business_id = p.business_id AND p.user_id = :user_id
         WHERE b.business_id = :business_id
     """)
-    business = g.conn.execute(business_query, {"business_id": business_id}).fetchone()
+    business = g.conn.execute(business_query, {
+        "business_id": business_id,
+        "user_id": user_id
+    }).fetchone()
     
     if business is None:
       return "Business not found", 404
@@ -266,71 +273,8 @@ def fetch_dashboard_information(user_id, cuisine=None, boro=None, min_rating=Non
     dashboardData['pins'] = pins
     dashboardData['groups'] = groups
     
-    print(ret['businesses'])
     print("Fetched filtered data for user", user_id)
     return ret
-
-@app.route('/business/<int:business_id>')
-def business_details(business_id):
-    """
-    Display detailed information about a specific business
-    """
-    if not session.get('logged_in'):
-        return redirect('/')
-        
-    try:
-        business_query = text("""
-            SELECT b.*, COALESCE(AVG(c.rating), 0) as average_rating, COUNT(c.comment_id) as review_count
-            FROM Business b
-            LEFT JOIN Comment c ON b.business_id = c.business_id
-            WHERE b.business_id = :business_id
-            GROUP BY b.business_id
-        """)
-        business = g.conn.execute(business_query, {"business_id": business_id}).fetchone()
-        
-        if not business:
-            flash('Business not found!')
-            return redirect('/')
-            
-        comments_query = text("""
-            SELECT c.*, u.first_name, u.last_name
-            FROM Comment c
-            JOIN User_Data u ON c.user_id = u.user_id
-            WHERE c.business_id = :business_id
-            ORDER BY c.comment_date DESC
-        """)
-        comments = g.conn.execute(comments_query, {"business_id": business_id}).fetchall()
-        
-        violations_query = text("""
-            SELECT v.*, i.inspection_date, i.grade
-            FROM Violation v
-            JOIN Inspection i ON v.inspection_id = i.inspection_id
-            WHERE i.business_id = :business_id
-            ORDER BY i.inspection_date DESC
-        """)
-        violations = g.conn.execute(violations_query, {"business_id": business_id}).fetchall()
-        
-        pin_query = text("""
-            SELECT * FROM Pin 
-            WHERE business_id = :business_id AND user_id = :user_id
-        """)
-        pin = g.conn.execute(pin_query, {
-            "business_id": business_id,
-            "user_id": session['user_id']
-        }).fetchone()
-        
-        return render_template(
-            'business_details.html',
-            business=business,
-            comments=comments,
-            violations=violations,
-            is_pinned=bool(pin)
-        )
-        
-    except Exception as e:
-        print("Error fetching business details:", e)
-        flash('Error fetching business details')
-        return redirect('/')
 
 @app.route('/business/<int:business_id>/comment', methods=['POST'])
 def submit_comment(business_id):
@@ -367,6 +311,54 @@ def submit_comment(business_id):
 
   return redirect(url_for('business_detail', business_id=business_id))
 
+@app.route('/business/<int:business_id>/toggle_pin', methods=['POST'])
+def toggle_pin(business_id):
+  if not session.get('user_id'):
+      print('User trying to pin but not logged in')
+      flash('You must be logged in to pin a business.')
+      return redirect(url_for('business_detail', business_id=business_id))
+
+  user_id = session.get('user_id')
+
+  try:
+      pin_query = text("""
+          SELECT * FROM Pin 
+          WHERE business_id = :business_id AND user_id = :user_id
+      """)
+      pin = g.conn.execute(pin_query, {
+          "business_id": business_id,
+          "user_id": user_id
+      }).fetchone()
+
+      if pin:
+          delete_pin_query = text("""
+              DELETE FROM Pin 
+              WHERE business_id = :business_id AND user_id = :user_id
+          """)
+          g.conn.execute(delete_pin_query, {
+              "business_id": business_id,
+              "user_id": user_id
+          })
+          print('Unpinned ', business_id, "!")
+          flash('Business unpinned successfully.')
+      else:
+          insert_pin_query = text("""
+              INSERT INTO Pin (user_id, business_id, color)
+              VALUES (:user_id, :business_id, 'red')
+          """)
+          g.conn.execute(insert_pin_query, {
+              "user_id": user_id,
+              "business_id": business_id
+          })
+          print('Pinned ', business_id, "!")
+          flash('Business pinned successfully.')
+
+      g.conn.commit()
+  except Exception as e:
+      print("Error toggling pin:", e)
+      flash('An error occurred while toggling the pin.')
+
+  return redirect(url_for('business_detail', business_id=business_id))
 
 if __name__ == "__main__":
   import click

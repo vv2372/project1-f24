@@ -11,41 +11,66 @@
     </head>
     <body class="bg-gray-100 flex items-center justify-center min-h-screen">
         <div class="bg-white p-8 rounded-lg shadow-lg max-w-4xl w-full">
-            <a
-                href="{{ url_for('home') }}"
-                class="bg-gray-300 text-black px-4 py-2 rounded mb-4 inline-block"
-            >
-                Back
-            </a>
-            <h1 class="text-2xl font-bold mb-4 text-center">
+            <div class="flex justify-between items-center mb-6">
+                <a
+                    href="{{ url_for('home') }}"
+                    class="bg-gray-300 text-black px-4 py-2 rounded inline-block"
+                >
+                    Back
+                </a>
+
+                <form
+                    method="POST"
+                    action="{{ url_for('toggle_pin', business_id=business.business_id) }}"
+                >
+                    <button
+                        type="submit"
+                        class="{% if business.is_pinned %}bg-red-500{% else %}bg-blue-500{% endif %} text-white px-4 py-2 rounded"
+                    >
+                        {{ 'Unpin' if business.is_pinned else 'Pin' }}
+                    </button>
+                </form>
+            </div>
+
+            <h1 class="text-3xl font-bold mb-4 text-center">
                 {{ business.business_name }}
             </h1>
-            <p>
-                <strong>Address:</strong> {{ business.street }}, {{
-                business.zipcode }}
-            </p>
-            <p><strong>Cuisine:</strong> {{ business.cuisine }}</p>
-            <p><strong>Borough:</strong> {{ business.boro }}</p>
+            <div class="text-center mb-6">
+                <p class="text-lg">
+                    <strong>Address:</strong> {{ business.street }}, {{
+                    business.zipcode }}
+                </p>
+                <p class="text-lg">
+                    <strong>Cuisine:</strong> {{ business.cuisine }}
+                </p>
+                <p class="text-lg">
+                    <strong>Borough:</strong> {{ business.boro }}
+                </p>
+            </div>
 
-            <div class="flex flex-col md:flex-row mt-8">
-                <div class="md:w-1/2 pr-4">
-                    <h2 class="text-xl font-semibold">Inspections</h2>
-                    <table class="min-w-full bg-white">
+            <div
+                class="flex flex-col md:flex-row mt-8 space-y-8 md:space-y-0 md:space-x-8"
+            >
+                <div class="md:w-1/2">
+                    <h2 class="text-xl font-semibold mb-2">Inspections</h2>
+                    <table class="min-w-full bg-white border">
                         <thead>
-                            <tr>
-                                <th class="py-2">Date</th>
-                                <th class="py-2">Grade</th>
-                                <th class="py-2">Type</th>
+                            <tr class="bg-gray-200">
+                                <th class="py-2 px-4 border-b">Date</th>
+                                <th class="py-2 px-4 border-b">Grade</th>
+                                <th class="py-2 px-4 border-b">Type</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for inspection in inspections %}
                             <tr class="bg-gray-50">
-                                <td class="py-2">
+                                <td class="py-2 px-4 border-b">
                                     {{ inspection.inspection_date }}
                                 </td>
-                                <td class="py-2">{{ inspection.grade }}</td>
-                                <td class="py-2">
+                                <td class="py-2 px-4 border-b">
+                                    {{ inspection.grade }}
+                                </td>
+                                <td class="py-2 px-4 border-b">
                                     {{ inspection.inspection_type }}
                                 </td>
                             </tr>
@@ -53,30 +78,32 @@
                         </tbody>
                     </table>
 
-                    <h2 class="text-xl font-semibold mt-4">Violations</h2>
-                    <table class="min-w-full bg-white">
+                    <h2 class="text-xl font-semibold mt-6 mb-2">Violations</h2>
+                    <table class="min-w-full bg-white border">
                         <thead>
-                            <tr>
-                                <th class="py-2">Description</th>
-                                <th class="py-2">Code</th>
+                            <tr class="bg-gray-200">
+                                <th class="py-2 px-4 border-b">Description</th>
+                                <th class="py-2 px-4 border-b">Code</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for violation in violations %}
                             <tr class="bg-gray-50">
-                                <td class="py-2">
+                                <td class="py-2 px-4 border-b">
                                     {{ violation.description }}
                                 </td>
-                                <td class="py-2">{{ violation.code }}</td>
+                                <td class="py-2 px-4 border-b">
+                                    {{ violation.code }}
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
 
-                <div class="md:w-1/2 pl-4">
-                    <h2 class="text-xl font-semibold">Comments</h2>
-                    <div class="max-h-96 overflow-y-auto">
+                <div class="md:w-1/2">
+                    <h2 class="text-xl font-semibold mb-2">Comments</h2>
+                    <div class="max-h-96 overflow-y-auto mb-4">
                         <ul class="space-y-4">
                             {% for comment in comments %}
                             <li class="bg-gray-50 p-4 rounded-lg shadow">

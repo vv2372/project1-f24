@@ -49,22 +49,18 @@
                 Welcome, {{ user.first_name }} {{ user.last_name }}
             </h1>
             <h2 class="text-xl font-semibold mb-2">Businesses</h2>
-            <div
-                class="filters-container"
-                style="
-                    margin: 20px 0;
-                    padding: 15px;
-                    background-color: #f8f9fa;
-                    border-radius: 5px;
-                "
-            >
-                <h4>Filter Restaurants</h4>
+            <div class="bg-gray-100 p-6 rounded-lg shadow-md mb-6">
+                <h4 class="text-lg font-semibold mb-4">Filter Restaurants</h4>
                 <form id="filter-form" method="GET" action="/">
-                    <div class="row">
-                        <div class="col-md-3">
-                            <label for="cuisine">Cuisine:</label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label
+                                for="cuisine"
+                                class="block text-sm font-medium text-gray-700"
+                                >Cuisine:</label
+                            >
                             <select
-                                class="form-control"
+                                class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                 name="cuisine"
                                 id="cuisine"
                             >
@@ -93,9 +89,17 @@
                                 <option value="Other">Other</option>
                             </select>
                         </div>
-                        <div class="col-md-3">
-                            <label for="boro">Borough:</label>
-                            <select class="form-control" name="boro" id="boro">
+                        <div>
+                            <label
+                                for="boro"
+                                class="block text-sm font-medium text-gray-700"
+                                >Borough:</label
+                            >
+                            <select
+                                class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                name="boro"
+                                id="boro"
+                            >
                                 <option value="">All Boroughs</option>
                                 <option value="Manhattan">Manhattan</option>
                                 <option value="Brooklyn">Brooklyn</option>
@@ -106,11 +110,15 @@
                                 </option>
                             </select>
                         </div>
-                        <div class="col-md-2">
-                            <label for="min_rating">Min Rating:</label>
+                        <div>
+                            <label
+                                for="min_rating"
+                                class="block text-sm font-medium text-gray-700"
+                                >Min Rating:</label
+                            >
                             <input
                                 type="number"
-                                class="form-control"
+                                class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                 name="min_rating"
                                 id="min_rating"
                                 min="0"
@@ -118,11 +126,15 @@
                                 step="0.1"
                             />
                         </div>
-                        <div class="col-md-2">
-                            <label for="max_rating">Max Rating:</label>
+                        <div>
+                            <label
+                                for="max_rating"
+                                class="block text-sm font-medium text-gray-700"
+                                >Max Rating:</label
+                            >
                             <input
                                 type="number"
-                                class="form-control"
+                                class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                                 name="max_rating"
                                 id="max_rating"
                                 min="0"
@@ -130,11 +142,11 @@
                                 step="0.1"
                             />
                         </div>
-                        <div
-                            class="col-md-2"
-                            style="display: flex; align-items: flex-end"
-                        >
-                            <button type="submit" class="btn btn-primary">
+                        <div class="flex items-end">
+                            <button
+                                type="submit"
+                                class="w-full bg-blue-500 text-white py-2 px-4 rounded-md shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            >
                                 Apply Filters
                             </button>
                         </div>
@@ -148,8 +160,10 @@
                     style="font-family: 'Inter', sans-serif"
                     onclick="centerMapOnBusiness({{ business.business_id }})"
                 >
-                    <div class="text-lg font-semibold">
-                        {{ business.business_name }}
+                    <div
+                        class="text-lg font-semibold {% if business.business_id in pins|map(attribute='business_id') %}text-red-500{% endif %}"
+                    >
+                        {{ loop.index }}. {{ business.business_name }}
                     </div>
                     <div class="text-md italic text-gray-600">
                         {{ business.cuisine }}
@@ -205,7 +219,7 @@
             });
 
             var redIcon = L.icon({
-                iconUrl: 'static/images/map-icon-heart.png',
+                iconUrl: 'static/images/map-icon-heart-red.png',
                 iconSize: [44, 44],
                 iconAnchor: [12, 41],
                 popupAnchor: [1, -34]

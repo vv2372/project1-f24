@@ -14,7 +14,7 @@ A debugger such as "pdb" may be helpful for debugging.
 import os
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
-from flask import Flask, request, render_template, g, redirect, Response, abort, session, flash
+from flask import Flask, request, render_template, g, redirect, Response, abort, session, flash, url_for
 from datetime import timedelta
 from db_setup import create_tables, engine
 
@@ -332,6 +332,41 @@ def business_details(business_id):
         flash('Error fetching business details')
         return redirect('/')
 
+@app.route('/business/<int:business_id>/comment', methods=['POST'])
+def submit_comment(business_id):
+  if not session.get('logged_in'):
+      flash('You must be logged in to comment.')
+      return redirect(url_for('business_detail', business_id=business_id))
+
+  user_id = session.get('user_id')
+  title = request.form.get('title')
+  message = request.form.get('message')
+  rating = request.form.get('rating')
+
+  if not title or not message or not rating:
+      flash('Title, message, and rating are required.')
+      return redirect(url_for('business_detail', business_id=business_id))
+
+  try:
+      insert_comment_query = text("""
+          INSERT INTO Comment (user_id, business_id, title, message, rating, comment_date)
+          VALUES (:user_id, :business_id, :title, :message, :rating, CURRENT_DATE)
+      """)
+      g.conn.execute(insert_comment_query, {
+          "user_id": user_id,
+          "business_id": business_id,
+          "title": title,
+          "message": message,
+          "rating": int(rating)
+      })
+      g.conn.commit()
+      flash('Comment submitted successfully.')
+  except Exception as e:
+      print("Error inserting comment:", e)
+      flash('An error occurred while submitting your comment.')
+
+  return redirect(url_for('business_detail', business_id=business_id))
+  
 # # User endpoints
 # @app.route('/api/users/<int:user_id>')
 # def get_user(user_id):

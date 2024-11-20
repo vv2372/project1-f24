@@ -145,7 +145,8 @@ def business_detail(business_id):
 
     business_query = text("""
         SELECT b.business_id, b.business_name, b.street, b.zipcode, b.cuisine, b.latitude, b.longitude, b.boro,
-               CASE WHEN p.business_id IS NOT NULL THEN TRUE ELSE FALSE END AS is_pinned
+               CASE WHEN p.business_id IS NOT NULL THEN TRUE ELSE FALSE END AS is_pinned,
+               p.color as pin_color
         FROM Business b
         LEFT JOIN Pin p ON b.business_id = p.business_id AND p.user_id = :user_id
         WHERE b.business_id = :business_id
@@ -202,13 +203,15 @@ def fetch_dashboard_information(user_id, cuisine=None, boro=None, min_rating=Non
 
     query_parts = ["""
         SELECT b.business_id, b.business_name, b.street, b.zipcode, b.cuisine, 
-               b.latitude, b.longitude, b.boro, CAST(COALESCE(AVG(c.rating), 0) AS INTEGER) AS average_rating
+               b.latitude, b.longitude, b.boro, CAST(COALESCE(AVG(c.rating), 0) AS INTEGER) AS average_rating,
+               p.color AS pin_color, CASE WHEN p.business_id IS NOT NULL THEN TRUE ELSE FALSE END AS is_pinned
         FROM Business b
         LEFT JOIN Comment c ON b.business_id = c.business_id
+        LEFT JOIN Pin p ON b.business_id = p.business_id AND p.user_id = :user_id
     """]
     
     where_conditions = []
-    params = {}
+    params = {"user_id": user_id}
     
     if cuisine:
         where_conditions.append("b.cuisine = :cuisine")
@@ -221,7 +224,7 @@ def fetch_dashboard_information(user_id, cuisine=None, boro=None, min_rating=Non
     if where_conditions:
         query_parts.append("WHERE " + " AND ".join(where_conditions))
         
-    query_parts.append("GROUP BY b.business_id")
+    query_parts.append("GROUP BY b.business_id, p.business_id, p.color")
     
     having_conditions = []
     if min_rating:
@@ -259,7 +262,6 @@ def fetch_dashboard_information(user_id, cuisine=None, boro=None, min_rating=Non
         "businesses": businesses,
         "pins": pins,
         "groups": groups,
-
         "current_filters": {
             "cuisine": cuisine,
             "boro": boro,
@@ -357,6 +359,34 @@ def toggle_pin(business_id):
   except Exception as e:
       print("Error toggling pin:", e)
       flash('An error occurred while toggling the pin.')
+
+  return redirect(url_for('business_detail', business_id=business_id))
+
+@app.route('/business/<int:business_id>/update_pin_color', methods=['POST'])
+def update_pin_color(business_id):
+  if not session.get('user_id'):
+      flash('You must be logged in to update pin color.')
+      return redirect(url_for('business_detail', business_id=business_id))
+
+  user_id = session.get('user_id')
+  color = request.form.get('color', 'red')
+
+  try:
+      update_color_query = text("""
+          UPDATE Pin
+          SET color = :color
+          WHERE business_id = :business_id AND user_id = :user_id
+      """)
+      g.conn.execute(update_color_query, {
+          "color": color,
+          "business_id": business_id,
+          "user_id": user_id
+      })
+      g.conn.commit()
+      flash('Pin color updated successfully.')
+  except Exception as e:
+      print("Error updating pin color:", e)
+      flash('An error occurred while updating the pin color.')
 
   return redirect(url_for('business_detail', business_id=business_id))
 

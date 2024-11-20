@@ -161,7 +161,7 @@
                     onclick="centerMapOnBusiness({{ business.business_id }})"
                 >
                     <div
-                        class="text-lg font-semibold {% if business.business_id in pins|map(attribute='business_id') %}text-red-500{% endif %}"
+                        class="text-lg font-semibold {% if business.is_pinned %} {% if business.pin_color == 'red' %}text-red-500 {% elif business.pin_color == 'green' %}text-green-500 {% elif business.pin_color == 'blue' %}text-blue-500 {% else %}text-black{% endif %} {% else %}text-black{% endif %}"
                     >
                         {{ loop.index }}. {{ business.business_name }}
                     </div>
@@ -211,9 +211,17 @@
                     });
                 }
             });
-            var blueIcon = L.icon({
+
+            var defaultIcon = L.icon({
                 iconUrl: 'static/images/map-icon.png',
                 iconSize: [37, 37],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34]
+            });
+
+            var blueIcon = L.icon({
+                iconUrl: 'static/images/map-icon-heart-blue.png',
+                iconSize: [44, 44],
                 iconAnchor: [12, 41],
                 popupAnchor: [1, -34]
             });
@@ -225,11 +233,31 @@
                 popupAnchor: [1, -34]
             });
 
+            var greenIcon = L.icon({
+                iconUrl: 'static/images/map-icon-heart-green.png',
+                iconSize: [44, 44],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34]
+            });
+
             var businessMarkers = {};
 
             {% for business in businesses %}
-                {% set has_pin = business.business_id in pins|map(attribute='business_id') %}
-                var icon = {{ 'true' if has_pin else 'false' }} ? redIcon : blueIcon;
+
+                var icon = defaultIcon;
+                {% if business.is_pinned %}
+                    {% if business.pin_color == "red" %}
+                        icon = redIcon;
+                    {% elif business.pin_color == "green" %}
+                        icon = greenIcon;
+                    {% elif business.pin_color == "blue" %}
+                        icon = blueIcon;
+                    {% else %}
+                        icon = defaultIcon;
+                    {% endif %}
+                {% else %}
+                    icon = defaultIcon;
+                {% endif %}
 
                 var marker = L.marker([{{ business.latitude }}, {{ business.longitude }}], { icon: icon })
                     .bindPopup(`

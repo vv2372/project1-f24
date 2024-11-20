@@ -81,9 +81,8 @@ def home():
 
 @app.route('/login', methods=['POST'])
 def do_login():
-  cursor = g.conn.execute(text("SELECT * FROM User_Data WHERE email = :email1 LIMIT 1;"), {
-    "email1": request.form['email']
-  })
+  query = text("SELECT * FROM User_Data WHERE email = :email LIMIT 1;")
+  cursor = g.conn.execute(query, {"email": request.form['email']})
   result = cursor.fetchone()
   if result:
     user_id = result._mapping['user_id']
@@ -107,10 +106,11 @@ def signup():
     # password = request.form['password']
 
     try:
-        g.conn.execute(text("""
+        insert_query = text("""
             INSERT INTO User_Data (email, phone_number, first_name, last_name, age)
             VALUES (:email, :phone_number, :first_name, :last_name, :age)
-        """), {
+        """)
+        g.conn.execute(insert_query, {
             "email": email,
             "phone_number": phone_number,
             "first_name": first_name,
@@ -241,27 +241,9 @@ def fetch_dashboard_information(user_id, cuisine=None, boro=None, min_rating=Non
     businesses = g.conn.execute(business_query, params).fetchall()
     businesses = sorted(businesses, key=lambda b: b.average_rating, reverse=True)
 
-    pin_query = text("""
-        SELECT p.pin_id, p.business_id, p.color
-        FROM Pin p
-        WHERE p.user_id = :user_id
-    """)
-    pins = g.conn.execute(pin_query, {"user_id": user_id}).fetchall()
-
-    # Fetch groups the user has joined
-    group_query = text("""
-        SELECT g.group_id, g.group_title, g.group_description
-        FROM Group_Data g
-        JOIN Joins j ON g.group_id = j.group_id
-        WHERE j.user_id = :user_id
-    """)
-    groups = g.conn.execute(group_query, {"user_id": user_id}).fetchall()
-
     ret = {
         "user": user_result,
         "businesses": businesses,
-        "pins": pins,
-        "groups": groups,
         "current_filters": {
             "cuisine": cuisine,
             "boro": boro,
@@ -272,8 +254,6 @@ def fetch_dashboard_information(user_id, cuisine=None, boro=None, min_rating=Non
     
     dashboardData['user'] = user_result
     dashboardData['businesses'] = businesses
-    dashboardData['pins'] = pins
-    dashboardData['groups'] = groups
     
     print("Fetched filtered data for user", user_id)
     return ret
